@@ -9,7 +9,9 @@ import java.util.UUID;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue
+    @org.hibernate.annotations.UuidGenerator
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
 
     @Column(nullable = false, length = 120)
@@ -28,7 +30,7 @@ public class User {
     private boolean accountNonLocked = true;
     private int failedLoginAttempts = 0;
 
-    // 🔐 Forgot Password Support
+    // Forgot Password Support
     private String resetOtp;
     private LocalDateTime resetOtpExpiry;
 
