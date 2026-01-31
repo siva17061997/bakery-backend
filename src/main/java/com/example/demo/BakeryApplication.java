@@ -6,8 +6,13 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
-@EntityScan("com.example.demo")
-@EnableJpaRepositories("com.example.demo")
+@EntityScan(basePackages = {
+        "com.example.demo.model",
+        "com.example.demo.entity"
+})
+@EnableJpaRepositories(basePackages = {
+        "com.example.demo.repository"
+})
 public class BakeryApplication {
 
     public static void main(String[] args) {
