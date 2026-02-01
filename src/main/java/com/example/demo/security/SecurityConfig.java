@@ -52,29 +52,17 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-            /* ===============================
-               CORS
-            ================================ */
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-            /* ===============================
-               STATELESS JWT
-            ================================ */
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            /* ===============================
-               AUTHORIZATION RULES
-            ================================ */
             .authorizeHttpRequests(auth -> auth
 
-                /* ✅ PREFLIGHT */
+                // ✅ PREFLIGHT (VERY IMPORTANT)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                /* ===============================
-                   PUBLIC PAGES
-                ================================ */
+                // PUBLIC PAGES
                 .requestMatchers(
                         "/",
                         "/index.html",
@@ -87,9 +75,7 @@ public class SecurityConfig {
                         "/favicon.ico"
                 ).permitAll()
 
-                /* ===============================
-                   STATIC FILES
-                ================================ */
+                // STATIC FILES
                 .requestMatchers(
                         "/css/**",
                         "/js/**",
@@ -98,45 +84,24 @@ public class SecurityConfig {
                         "/uploads/**"
                 ).permitAll()
 
-                /* ===============================
-                   AUTH APIs
-                ================================ */
+                // AUTH APIs
                 .requestMatchers("/api/auth/**").permitAll()
 
-                /* ===============================
-                   PRODUCTS (PUBLIC)
-                ================================ */
+                // PRODUCTS PUBLIC
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
 
-                /* ===============================
-                   ADMIN ONLY
-                ================================ */
+                // ADMIN
                 .requestMatchers("/admin.html").hasAuthority("ADMIN")
                 .requestMatchers("/api/products/admin/**").hasAuthority("ADMIN")
                 .requestMatchers("/api/orders/admin/**").hasAuthority("ADMIN")
 
-                /* ===============================
-                   USER ORDER HISTORY (JWT)
-                ================================ */
+                // USER
                 .requestMatchers(HttpMethod.GET, "/api/orders/my").authenticated()
+                .requestMatchers("/api/cart/**", "/api/orders/**").authenticated()
 
-                /* ===============================
-                   USER APIs (JWT REQUIRED)
-                ================================ */
-                .requestMatchers(
-                        "/api/cart/**",
-                        "/api/orders/**"
-                ).authenticated()
-
-                /* ===============================
-                   EVERYTHING ELSE
-                ================================ */
                 .anyRequest().authenticated()
             )
 
-            /* ===============================
-               JWT FILTER
-            ================================ */
             .addFilterBefore(
                 jwtAuthFilter,
                 UsernamePasswordAuthenticationFilter.class
@@ -146,14 +111,15 @@ public class SecurityConfig {
     }
 
     /* ===============================
-       CORS CONFIGURATION
+       CORS CONFIGURATION (FINAL FIX)
     ================================ */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
+        // ⭐ THIS LINE FIXES YOUR GITHUB PAGES CORS
+        config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5500",
                 "http://127.0.0.1:5500",
                 "http://localhost:8080",
