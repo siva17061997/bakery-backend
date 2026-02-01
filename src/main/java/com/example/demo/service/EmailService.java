@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.model.Order;
 import com.example.demo.model.OrderItem;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -12,22 +13,34 @@ import java.util.*;
 public class EmailService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String BREVO_URL = "https://api.brevo.com/v3/smtp/email";
-    private final String API_KEY = System.getenv("BREVO_API_KEY");
+    private static final String BREVO_URL = "https://api.brevo.com/v3/smtp/email";
 
+    @Value("${BREVO_API_KEY}")
+    private String apiKey;
+
+    @Value("${brevo.sender.email}")
+    private String senderEmail;
+
+    @Value("${brevo.sender.name}")
+    private String senderName;
+
+    // ================= COMMON EMAIL METHOD =================
     private void sendEmail(String toEmail, String subject, String content) {
 
-        if (API_KEY == null) {
-            System.err.println("BREVO_API_KEY missing. Email skipped.");
+        if (apiKey == null || apiKey.isBlank()) {
+            System.err.println("❌ BREVO_API_KEY missing. Email skipped.");
             return;
         }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("api-key", API_KEY);
+        headers.set("api-key", apiKey);
 
         Map<String, Object> body = new HashMap<>();
-        body.put("sender", Map.of("name", "Bakery Shop", "email", "no-reply@bakery.com"));
+        body.put("sender", Map.of(
+                "name", senderName,
+                "email", senderEmail
+        ));
         body.put("to", List.of(Map.of("email", toEmail)));
         body.put("subject", subject);
         body.put("textContent", content);
@@ -42,43 +55,56 @@ public class EmailService {
         }
     }
 
-    // OTP
+    // ================= OTP EMAIL =================
     public void sendOtp(String toEmail, String otp) {
-        String body = "Your OTP is: " + otp + "\n\nDo not share this OTP.";
+        String body = "Your OTP is: " + otp +
+                "\n\nDo not share this OTP with anyone." +
+                "\n\n- Bakery Shop";
         sendEmail(toEmail, "Email Verification - OTP", body);
     }
 
-    // User Order Email
+    // ================= USER ORDER EMAIL =================
     public void sendOrderConfirmation(String toEmail, Order order, List<OrderItem> items) {
 
         StringBuilder body = new StringBuilder();
-        body.append("Hello ").append(order.getName()).append("\n\nOrder Confirmed!\n\n");
+        body.append("Hello ").append(order.getName()).append(",\n\n");
+        body.append("Your order has been confirmed!\n\n");
 
         for (OrderItem item : items) {
             body.append(item.getName())
-                .append(" x ")
-                .append(item.getQty())
-                .append("\n");
+                    .append(" x ")
+                    .append(item.getQty())
+                    .append("\n");
         }
 
-        body.append("\nTotal: ₹").append(order.getTotalAmount());
+        body.append("\nTotal Amount: ₹").append(order.getTotalAmount());
+        body.append("\n\nThank you for shopping with us!\nBakery Shop");
 
         sendEmail(toEmail,
                 "Order #" + order.getId() + " Confirmed",
                 body.toString());
     }
 
-    // Admin Email
+    // ================= ADMIN ORDER NOTIFICATION =================
     public void sendAdminOrderNotification(Order order, List<OrderItem> items) {
 
-        String admin = "sivavkvs@gmail.com";
+        String adminEmail = senderEmail; // send to yourself/admin
 
         StringBuilder body = new StringBuilder();
-        body.append("New Order #").append(order.getId()).append("\n");
+        body.append("New Order Received!\n\n");
+        body.append("Order ID: ").append(order.getId()).append("\n");
         body.append("Customer: ").append(order.getName()).append("\n");
-        body.append("Total: ₹").append(order.getTotalAmount()).append("\n");
+        body.append("Total: ₹").append(order.getTotalAmount()).append("\n\n");
 
-        sendEmail(admin,
+        body.append("Items:\n");
+        for (OrderItem item : items) {
+            body.append(item.getName())
+                    .append(" x ")
+                    .append(item.getQty())
+                    .append("\n");
+        }
+
+        sendEmail(adminEmail,
                 "New Order #" + order.getId(),
                 body.toString());
     }
