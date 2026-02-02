@@ -13,8 +13,7 @@ import java.util.List;
 @Service
 public class EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
 
     @Value("${brevo.sender.email}")
     private String senderEmail;
@@ -22,24 +21,39 @@ public class EmailService {
     @Value("${brevo.sender.name}")
     private String senderName;
 
-    // ================= OTP EMAIL =================
-    public void sendOtp(String toEmail, String otp) {
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(senderEmail);
-        message.setTo(toEmail);
-        message.setSubject("Email Verification - OTP");
-        message.setText(
-                "Your OTP is: " + otp +
-                "\n\nDo not share this OTP with anyone." +
-                "\n\n- " + senderName
-        );
-
-        mailSender.send(message);
-        System.out.println("✅ OTP mail sent to " + toEmail);
+    @Autowired
+    public EmailService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
     }
 
-    // ================= ORDER CONFIRMATION EMAIL =================
+    // ================= COMMON METHOD =================
+    private void sendMail(String to, String subject, String body) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(senderEmail);
+            message.setTo(to);
+            message.setSubject(subject);
+            message.setText(body);
+
+            mailSender.send(message);
+            System.out.println("✅ Mail sent to " + to);
+
+        } catch (Exception e) {
+            System.err.println("❌ Mail failed: " + e.getMessage());
+        }
+    }
+
+    // ================= OTP EMAIL =================
+    public void sendOtp(String toEmail, String otp) {
+        String body =
+                "Your OTP is: " + otp +
+                "\n\nDo not share this OTP with anyone." +
+                "\n\n- " + senderName;
+
+        sendMail(toEmail, "Email Verification - OTP", body);
+    }
+
+    // ================= ORDER CONFIRMATION =================
     public void sendOrderConfirmation(String toEmail, Order order, List<OrderItem> items) {
 
         StringBuilder body = new StringBuilder();
@@ -56,14 +70,9 @@ public class EmailService {
         body.append("\nTotal Amount: ₹").append(order.getTotalAmount());
         body.append("\n\nThank you for shopping with us!\n").append(senderName);
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(senderEmail);
-        message.setTo(toEmail);
-        message.setSubject("Order #" + order.getId() + " Confirmed");
-        message.setText(body.toString());
-
-        mailSender.send(message);
-        System.out.println("✅ Order mail sent to " + toEmail);
+        sendMail(toEmail,
+                "Order #" + order.getId() + " Confirmed",
+                body.toString());
     }
 
     // ================= ADMIN ORDER NOTIFICATION =================
@@ -82,13 +91,8 @@ public class EmailService {
                 .append("\n");
         }
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(senderEmail);
-        message.setTo(senderEmail); // admin mail
-        message.setSubject("New Order #" + order.getId());
-        message.setText(body.toString());
-
-        mailSender.send(message);
-        System.out.println("✅ Admin mail sent");
+        sendMail(senderEmail,
+                "New Order #" + order.getId(),
+                body.toString());
     }
 }
