@@ -2,18 +2,20 @@ package com.example.demo.service;
 
 import com.example.demo.model.Order;
 import com.example.demo.model.OrderItem;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
+import java.util.*;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${brevo.api.key}")
+    private String apiKey;
 
     @Value("${brevo.sender.email}")
     private String senderEmail;
@@ -21,25 +23,37 @@ public class EmailService {
     @Value("${brevo.sender.name}")
     private String senderName;
 
-    @Autowired
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    private static final String BREVO_URL =
+            "https://api.brevo.com/v3/smtp/email";
 
-    // ================= COMMON METHOD =================
-    private void sendMail(String to, String subject, String body) {
+    // ================= COMMON SEND METHOD =================
+    private void sendEmail(String to, String subject, String content) {
+
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(senderEmail);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(body);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", apiKey.trim());   // VERY IMPORTANT
 
-            mailSender.send(message);
-            System.out.println("✅ Mail sent to " + to);
+            Map<String, Object> body = new HashMap<>();
+            body.put("sender", Map.of(
+                    "name", senderName,
+                    "email", senderEmail
+            ));
+            body.put("to", List.of(Map.of("email", to)));
+            body.put("subject", subject);
+            body.put("textContent", content);
+
+            HttpEntity<Map<String, Object>> request =
+                    new HttpEntity<>(body, headers);
+
+            ResponseEntity<String> response =
+                    restTemplate.postForEntity(BREVO_URL, request, String.class);
+
+            System.out.println("✅ Email sent to " + to +
+                    " | Status: " + response.getStatusCode());
 
         } catch (Exception e) {
-            System.err.println("❌ Mail failed: " + e.getMessage());
+            System.err.println("❌ Email failed: " + e.getMessage());
         }
     }
 
@@ -50,7 +64,7 @@ public class EmailService {
                 "\n\nDo not share this OTP with anyone." +
                 "\n\n- " + senderName;
 
-        sendMail(toEmail, "Email Verification - OTP", body);
+        sendEmail(toEmail, "Email Verification - OTP", body);
     }
 
     // ================= ORDER CONFIRMATION =================
@@ -70,7 +84,7 @@ public class EmailService {
         body.append("\nTotal Amount: ₹").append(order.getTotalAmount());
         body.append("\n\nThank you for shopping with us!\n").append(senderName);
 
-        sendMail(toEmail,
+        sendEmail(toEmail,
                 "Order #" + order.getId() + " Confirmed",
                 body.toString());
     }
@@ -91,7 +105,7 @@ public class EmailService {
                 .append("\n");
         }
 
-        sendMail(senderEmail,
+        sendEmail(senderEmail,
                 "New Order #" + order.getId(),
                 body.toString());
     }
