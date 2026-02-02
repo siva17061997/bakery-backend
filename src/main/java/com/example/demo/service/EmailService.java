@@ -15,7 +15,7 @@ public class EmailService {
     private final RestTemplate restTemplate = new RestTemplate();
     private static final String BREVO_URL = "https://api.brevo.com/v3/smtp/email";
 
-    @Value("${BREVO_API_KEY}")
+    @Value("${brevo.api.key}")
     private String apiKey;
 
     @Value("${brevo.sender.email}")
@@ -28,13 +28,13 @@ public class EmailService {
     private void sendEmail(String toEmail, String subject, String content) {
 
         if (apiKey == null || apiKey.isBlank()) {
-            System.err.println("❌ BREVO_API_KEY missing. Email skipped.");
+            System.err.println("❌ BREVO API KEY missing. Email skipped.");
             return;
         }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("api-key", apiKey);
+        headers.set("api-key", apiKey.trim());
 
         Map<String, Object> body = new HashMap<>();
         body.put("sender", Map.of(
@@ -59,7 +59,7 @@ public class EmailService {
     public void sendOtp(String toEmail, String otp) {
         String body = "Your OTP is: " + otp +
                 "\n\nDo not share this OTP with anyone." +
-                "\n\n- Bakery Shop";
+                "\n\n- " + senderName;
         sendEmail(toEmail, "Email Verification - OTP", body);
     }
 
@@ -72,23 +72,21 @@ public class EmailService {
 
         for (OrderItem item : items) {
             body.append(item.getName())
-                    .append(" x ")
-                    .append(item.getQty())
-                    .append("\n");
+                .append(" x ")
+                .append(item.getQty())
+                .append("\n");
         }
 
         body.append("\nTotal Amount: ₹").append(order.getTotalAmount());
-        body.append("\n\nThank you for shopping with us!\nBakery Shop");
+        body.append("\n\nThank you for shopping with us!\n").append(senderName);
 
         sendEmail(toEmail,
                 "Order #" + order.getId() + " Confirmed",
                 body.toString());
     }
 
-    // ================= ADMIN ORDER NOTIFICATION =================
+    // ================= ADMIN ORDER EMAIL =================
     public void sendAdminOrderNotification(Order order, List<OrderItem> items) {
-
-        String adminEmail = senderEmail; // send to yourself/admin
 
         StringBuilder body = new StringBuilder();
         body.append("New Order Received!\n\n");
@@ -99,12 +97,12 @@ public class EmailService {
         body.append("Items:\n");
         for (OrderItem item : items) {
             body.append(item.getName())
-                    .append(" x ")
-                    .append(item.getQty())
-                    .append("\n");
+                .append(" x ")
+                .append(item.getQty())
+                .append("\n");
         }
 
-        sendEmail(adminEmail,
+        sendEmail(senderEmail,
                 "New Order #" + order.getId(),
                 body.toString());
     }
