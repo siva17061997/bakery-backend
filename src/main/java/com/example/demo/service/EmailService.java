@@ -27,6 +27,10 @@ public class EmailService {
     // ================= COMMON EMAIL METHOD =================
     private void sendEmail(String toEmail, String subject, String content) {
 
+        // 🔍 DEBUG (temporary)
+        System.out.println("API KEY = [" + apiKey + "]");
+        System.out.println("SENDER  = [" + senderEmail + "]");
+
         if (apiKey == null || apiKey.isBlank()) {
             System.err.println("❌ BREVO API KEY missing. Email skipped.");
             return;
@@ -63,47 +67,34 @@ public class EmailService {
         sendEmail(toEmail, "Email Verification - OTP", body);
     }
 
-    // ================= USER ORDER EMAIL =================
+    // ================= ORDER EMAIL =================
     public void sendOrderConfirmation(String toEmail, Order order, List<OrderItem> items) {
-
         StringBuilder body = new StringBuilder();
         body.append("Hello ").append(order.getName()).append(",\n\n");
         body.append("Your order has been confirmed!\n\n");
 
         for (OrderItem item : items) {
-            body.append(item.getName())
-                .append(" x ")
-                .append(item.getQty())
-                .append("\n");
+            body.append(item.getName()).append(" x ").append(item.getQty()).append("\n");
         }
 
         body.append("\nTotal Amount: ₹").append(order.getTotalAmount());
         body.append("\n\nThank you for shopping with us!\n").append(senderName);
 
-        sendEmail(toEmail,
-                "Order #" + order.getId() + " Confirmed",
-                body.toString());
+        sendEmail(toEmail, "Order #" + order.getId() + " Confirmed", body.toString());
     }
 
-    // ================= ADMIN ORDER EMAIL =================
+    // ================= ADMIN EMAIL =================
     public void sendAdminOrderNotification(Order order, List<OrderItem> items) {
-
         StringBuilder body = new StringBuilder();
         body.append("New Order Received!\n\n");
         body.append("Order ID: ").append(order.getId()).append("\n");
         body.append("Customer: ").append(order.getName()).append("\n");
         body.append("Total: ₹").append(order.getTotalAmount()).append("\n\n");
 
-        body.append("Items:\n");
         for (OrderItem item : items) {
-            body.append(item.getName())
-                .append(" x ")
-                .append(item.getQty())
-                .append("\n");
+            body.append(item.getName()).append(" x ").append(item.getQty()).append("\n");
         }
 
-        sendEmail(senderEmail,
-                "New Order #" + order.getId(),
-                body.toString());
+        sendEmail(senderEmail, "New Order #" + order.getId(), body.toString());
     }
 }
