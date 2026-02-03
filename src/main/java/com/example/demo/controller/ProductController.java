@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.example.demo.dto.ProductDto;
 import com.example.demo.model.Product;
 import com.example.demo.service.ProductService;
@@ -12,10 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,9 +23,11 @@ import java.util.Map;
 public class ProductController {
 
     private final ProductService service;
+    private final Cloudinary cloudinary;
 
-    public ProductController(ProductService service) {
+    public ProductController(ProductService service, Cloudinary cloudinary) {
         this.service = service;
+        this.cloudinary = cloudinary;
     }
 
     /* =====================================
@@ -106,7 +106,7 @@ public class ProductController {
     }
 
     /* =====================================
-       ADMIN – UPDATE PRODUCT ✅
+       ADMIN – UPDATE PRODUCT
     ===================================== */
     @PutMapping(
             value = "/admin/{id}",
@@ -141,7 +141,6 @@ public class ProductController {
             product.setQtyType(qtyType);
             product.setQuantity(quantity);
 
-            // Update image only if new one uploaded
             if (image != null && !image.isEmpty()) {
                 String imageUrl = saveImage(image);
                 product.setImageUrl(imageUrl);
@@ -169,29 +168,16 @@ public class ProductController {
     }
 
     /* =====================================
-       IMAGE SAVE UTILITY
+       CLOUDINARY IMAGE UPLOAD  ✅
     ===================================== */
     private String saveImage(MultipartFile image) throws Exception {
 
-        Path uploadDir = Paths.get("uploads");
-        if (!Files.exists(uploadDir)) {
-            Files.createDirectories(uploadDir);
-        }
-
-        String fileName =
-                System.currentTimeMillis()
-                + "_product_"
-                + (int) (Math.random() * 10000)
-                + ".jpg";
-
-        Path filePath = uploadDir.resolve(fileName);
-        Files.copy(
-                image.getInputStream(),
-                filePath,
-                StandardCopyOption.REPLACE_EXISTING
+        Map uploadResult = cloudinary.uploader().upload(
+                image.getBytes(),
+                ObjectUtils.emptyMap()
         );
 
-        return "/uploads/" + fileName;
+        return uploadResult.get("secure_url").toString();
     }
 
     /* =====================================
